@@ -88,3 +88,12 @@ export interface EmitResult {
   files: EmitFile[];
   diagnostics: Diagnostic[];
 }
+
+/** Portable single-file bundle of a skill source (skillc pack). */
+export interface SkillPack {
+  skillpack: 1;
+  name: string;
+  version: string;
+  irHash: string;
+  files: Record<string, string>;
+}

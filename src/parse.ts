@@ -7,7 +7,7 @@ import { canonicalStringify, sha256Text } from "./util.js";
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
-function parseFrontmatter(text: string): { fm: Record<string, string>; body: string } {
+export function parseFrontmatter(text: string): { fm: Record<string, string>; body: string } {
   const m = FRONTMATTER_RE.exec(text);
   if (!m) return { fm: {}, body: text };
   const fm = (yaml.load(m[1]) as Record<string, string>) ?? {};

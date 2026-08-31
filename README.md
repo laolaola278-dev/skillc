@@ -21,10 +21,10 @@ skillc 编译出每个 harness 的原生格式，能力缺失时明确降级（�
 
 ## Status / 状态
 
-MVP milestone 1 (this repo): source parsing, IR, compat diagnostics, Claude Code
-emitter, safe sync with lockfile, doctor, build/sync CLI. M2: Codex (AGENTS.md
-injection) + DSH emitters. M3: pack/unpack reverse import, upgrade, docs polish.
-See docs/FORMAT.md for the source format spec.
+MVP complete (this repo): source parsing, IR, compat diagnostics, emitters for
+Claude Code + Codex (AGENTS.md injection) + DSH, safe sync with lockfile, doctor,
+pack/unpack reverse import, upgrade. Verified: 11/11 tests, npm-pack install
+smoke test passes. See docs/FORMAT.md for the source format spec.
 
 ## Quick start / 快速开始
 

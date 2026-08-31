@@ -8,6 +8,7 @@ import { validateSkillYaml } from "../src/schema.js";
 import { checkCompat } from "../src/compat.js";
 import { emitForTarget } from "../src/emit/index.js";
 import { applyPlan, injectionBlock, planSync } from "../src/sync.js";
+import { packSource, unpackInto, writePack } from "../src/pack.js";
 import { mergeLock, readLockfile as readLock, writeLockfile } from "../src/lockfile.js";
 
 const REPO = resolve(import.meta.dirname, "..");
@@ -199,4 +200,41 @@ test("sync injection: append, idempotent, replace preserves surrounding text", (
   const foreign2 = injectionBlock("other-skill", "0.0.2", "more rules");
   const planForeign2 = planSync("codex", [{ ...inj2, markerName: "other-skill", content: foreign2 }], root, null);
   assert.equal(planForeign2.actions[0].kind, "inject-replace", "same marker, new content -> replace");
+});
+
+test("pack/unpack round-trip preserves the source", () => {
+  const src = makeSource("t8", YAML, MD);
+  const pack = packSource(src);
+  assert.equal(pack.name, "demo-skill");
+  assert.equal(Object.keys(pack.files).sort().join(","), "SKILL.md,skill.yaml");
+  const out = join(TMP, "t8", "restored");
+  writePack(pack, join(TMP, "t8", "demo.skillpack"));
+  const res = unpackInto(join(TMP, "t8", "demo.skillpack"), out);
+  const ir = loadSource(res.outDir).ir;
+  assert.equal(ir.name, "demo-skill");
+  assert.equal(ir.version, "1.0.0");
+  assert.equal(ir.tools.length, 1);
+  assert.equal(ir.body.trim(), loadSource(src).ir.body.trim());
+  assert.equal(ir.irHash, loadSource(src).ir.irHash, "irHash identical after round-trip");
+});
+
+test("unpack reverse-imports a bare SKILL.md directory", () => {
+  const bare = join(TMP, "t9", "some-skill");
+  mkdirSync(bare, { recursive: true });
+  writeFileSync(
+    join(bare, "SKILL.md"),
+    "---\nname: imported-skill\ndescription: Imported from elsewhere.\n---\n\n# Imported\n\nBody here.\n",
+    "utf8"
+  );
+  const tdir = join(bare, "tools", "x-tool");
+  mkdirSync(tdir, { recursive: true });
+  writeFileSync(join(tdir, "tool.json"), JSON.stringify({ id: "x-tool", advertise: "x-tool" }), "utf8");
+
+  const res = unpackInto(bare, join(TMP, "t9", "out"));
+  const { ir, diagnostics } = loadSource(res.outDir);
+  assert.equal(ir.name, "imported-skill");
+  assert.equal(ir.description, "Imported from elsewhere.");
+  assert.equal(ir.tools.length, 1);
+  assert.deepEqual(ir.needs, ["read-files", "write-files"], "conservative default needs");
+  assert.equal(diagnostics.length, 0);
 });

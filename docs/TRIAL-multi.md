@@ -59,7 +59,7 @@
 
 ### 5.3 OpenClaw
 
-- 用户主配置 `~/.openclaw/openclaw.json` **当前已损坏**：`skills.load.extraDirs` 中文路径 mojibake 且缺收尾引号，严格 JSON 解析失败（"Unterminated string"）。本试跑**未改动**用户配置，改用 `--profile trial-a/b` 隔离（`~/.openclaw-trial-{a,b}/openclaw.json`，写入 vsllm provider + agentskills 技能目录）。
+- 用户主配置 `~/.openclaw/openclaw.json` **文件本身有效**（Node UTF-8 解析通过；起初的"损坏"判断是探针假象——Windows PowerShell 5.1 对无 BOM UTF-8 按 ANSI 误读，奇数字节中文名吞掉收尾引号）。其 `skills.load.extraDirs` 指向 `G:\openclaw_chat_project\剪辑处理\抖音自动化`，与真实目录一致；旁边确有一个 URL 编码名的姊妹目录 `%E5%89%AA%E8%BE%91%E5%A4%84%E7%90%86`（某次工具错写产物），可手动清理。为保持基线纯净，本试跑未复用用户主配置，改用 `--profile trial-a/b` 隔离（`~/.openclaw-trial-{a,b}/openclaw.json`，写入 vsllm provider + agentskills 技能目录）。
 - 非交互 `agents add` **必须带 agent id**（`openclaw --profile <p> agents add <id> --workspace <dir> --non-interactive`），否则报 "Agent name is required"。
 - one-shot：`openclaw --profile <p> agent --local --agent <id> --message-file <path> --json --timeout 600`。
 
@@ -69,7 +69,7 @@
 2. **基线臂的边界行为是系统性风险**：无技能时 codex 越界到用户主目录、hermes/openclaw 越界到父仓库树翻检试验残留、claude 尝试用户主目录（被沙箱拦下）。生产环境中这类搜盘既是信息泄露面也不可复现。接入 skillc 后 4 个运行时**全部收敛到技能目录内**。
 3. **Hermes 非确定性记录**：臂 A 第一次运行（420s 超时截断）曾越界搜到 `qm-deploy-test` 仓库并读了真实 deployment.md；重跑（正式记录）未复现该路径。单次试跑不能替代重复实验，表中数据为完成会话。
 4. **token 口径**：Claude Code/Codex 由 CLI 直接给出；Hermes 取自 `state.db` `sessions` 表（in/out/cacheR 分列）；OpenClaw 取 JSON `toolSummary` + `promptTokens`。cache 命中结构不同（Hermes 臂 A cacheR 显著更高），横向只比同运行时 A/B。
-5. **后续清单**：修 openclaw.json mojibake（需用户确认）；M3.5 资源捆绑后 4 运行时重跑一轮看"全对率"；HDS/DSH 侧集成仍按用户指示暂缓。
+5. **后续清单**：M3.5 资源捆绑后 4 运行时重跑一轮看"全对率"；HDS/DSH 侧集成仍按用户指示暂缓。（openclaw.json "损坏"项已撤销——见 §5.3 更正，文件无需修复。）
 
 ## 7. 边界遵守
 

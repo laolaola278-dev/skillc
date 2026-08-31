@@ -132,6 +132,21 @@ test("emit dsh: triggers compiled into text with info diagnostic", () => {
   assert.ok(ccDiags.some((d) => d.code === "triggers-compiled-out"), "cron compiled out on claude-code");
 });
 
+test("emit hermes: agentskills SKILL.md + tools, triggers inline without diagnostics", () => {
+  const yml = YAML + "triggers:\n  - cron: \"0 9 * * 1\"\n    prompt: morning check\n";
+  const ir = loadSource(makeSource("t5d", yml, MD)).ir;
+  const { files, diagnostics } = emitForTarget("hermes", ir);
+  const skill = files.find((f) => f.path === ".hermes/skills/demo-skill/SKILL.md");
+  assert.ok(skill, "hermes SKILL.md emitted");
+  assert.ok(skill.content.startsWith("---\nname: demo-skill\n"));
+  assert.ok(skill.content.includes(JSON.stringify("A demo skill for tests.")));
+  assert.ok(skill.content.includes("## Triggers"));
+  assert.ok(skill.content.includes("## Tools"));
+  const tool = files.find((f) => f.path === ".hermes/skills/demo-skill/tools/demo-tool/tool.json");
+  assert.ok(tool, "hermes tool.json emitted");
+  assert.equal(diagnostics.length, 0, "hermes is fully capable for this fixture");
+});
+
 test("sync standalone: create -> unchanged -> blocked -> force replace", () => {
   const ir = loadSource(makeSource("t6", YAML, MD)).ir;
   const root = join(TMP, "t6", "root");

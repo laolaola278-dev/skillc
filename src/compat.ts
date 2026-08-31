@@ -8,6 +8,7 @@ export const TARGET_CAPS: Record<TargetId, Capability[]> = {
   "claude-code": ["read-files", "write-files", "shell", "web-fetch", "subagents", "memory", "mcp"],
   codex: ["read-files", "write-files", "shell", "mcp"],
   dsh: ["read-files", "write-files", "shell", "web-fetch", "subagents", "memory", "mcp", "cron"],
+  hermes: ["read-files", "write-files", "shell", "web-fetch", "subagents", "mcp", "cron"],
   cursor: ["read-files", "write-files", "shell", "web-fetch"],
   opencode: ["read-files", "write-files", "shell", "web-fetch", "subagents", "mcp"],
   pi: ["read-files", "write-files", "shell", "web-fetch", "subagents", "mcp"]

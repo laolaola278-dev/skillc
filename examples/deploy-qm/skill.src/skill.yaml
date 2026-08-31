@@ -11,3 +11,4 @@ targets:
   claude-code: {}
   codex: {}
   dsh: {}
+  hermes: {}

@@ -3,3 +3,5 @@ dist/
 .skillc/
 *.tgz
 tmp-*/
+tmp-hermes-*
+tmp-baseline-out.txt

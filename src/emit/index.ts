@@ -3,14 +3,16 @@ import type { EmitResult, SkillIR, TargetId } from "../types.js";
 import { emitClaudeCode } from "./claude-code.js";
 import { emitCodex } from "./codex.js";
 import { emitDsh } from "./dsh.js";
+import { emitHermes } from "./hermes.js";
 
 /** Targets with a working emitter. */
-export const IMPLEMENTED_TARGETS: readonly TargetId[] = ["claude-code", "codex", "dsh"];
+export const IMPLEMENTED_TARGETS: readonly TargetId[] = ["claude-code", "codex", "dsh", "hermes"];
 
 const EMITTERS: Partial<Record<TargetId, (ir: SkillIR) => EmitResult>> = {
   "claude-code": emitClaudeCode,
   codex: emitCodex,
-  dsh: emitDsh
+  dsh: emitDsh,
+  hermes: emitHermes
 };
 
 export function emitForTarget(target: TargetId, ir: SkillIR): EmitResult {

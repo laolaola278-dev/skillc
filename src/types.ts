@@ -15,6 +15,7 @@ export const KNOWN_TARGETS = [
   "claude-code",
   "codex",
   "dsh",
+  "hermes",
   "cursor",
   "opencode",
   "pi"

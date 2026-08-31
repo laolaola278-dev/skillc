@@ -1,0 +1,26 @@
+{
+  "name": "skillc",
+  "version": "0.1.0",
+  "description": "Compile one agent skill source to every harness: Claude Code, Codex, DSH. Write once, compile anywhere.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "bin": { "skillc": "dist/cli.js" },
+  "files": ["dist", "README.md", "docs"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "test": "tsx --test test/*.test.ts",
+    "skillc": "node dist/cli.js"
+  },
+  "dependencies": {
+    "commander": "^14.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import yaml from "js-yaml";
 import type { Diagnostic, SkillIR, ToolRef } from "./types.js";
@@ -6,6 +6,70 @@ import { validateSkillYaml } from "./schema.js";
 import { canonicalStringify, sha256Text } from "./util.js";
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
+
+/**
+ * Resource files to bundle verbatim next to the compiled SKILL.md on every
+ * target. An explicit `resources:` list in skill.yaml wins; when the field is
+ * absent every non-source file in the skill source is auto-detected
+ * (SKILL.md, skill.yaml, tools/ descriptors and dotfiles are always source).
+ * An empty explicit array opts out entirely.
+ */
+function collectResources(
+  srcDir: string,
+  explicit: string[] | undefined,
+  diagnostics: Diagnostic[]
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (explicit !== undefined) {
+    for (const relRaw of explicit) {
+      const rel = relRaw.split("\\").join("/");
+      const abs = join(srcDir, ...rel.split("/"));
+      if (!existsSync(abs) || !statSync(abs).isFile()) {
+        diagnostics.push({
+          level: "error",
+          code: "resource-missing",
+          message: `resources: "${rel}" does not exist in the skill source`
+        });
+        continue;
+      }
+      out[rel] = readFileSync(abs, "utf8");
+    }
+    return out;
+  }
+  const walk = (dir: string, prefix: string): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name.startsWith(".")) continue;
+      const rel = prefix ? prefix + "/" + e.name : e.name;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name !== "tools") walk(p, rel);
+        continue;
+      }
+      if (rel === "SKILL.md" || rel === "skill.yaml") continue;
+      out[rel] = readFileSync(p, "utf8");
+    }
+  };
+  walk(srcDir, "");
+  return out;
+}
+
+/** Warn when SKILL.md points at a bundled-looking doc that ships nowhere. */
+function checkBodyReferences(
+  body: string,
+  resources: Record<string, string>,
+  diagnostics: Diagnostic[]
+): void {
+  const bundled = new Set(Object.keys(resources));
+  for (const m of body.matchAll(/`([^`\r\n]+\.md)`/g)) {
+    const ref = m[1].split("\\").join("/");
+    if (ref === "SKILL.md" || bundled.has(ref)) continue;
+    diagnostics.push({
+      level: "warning",
+      code: "missing-referenced-resource",
+      message: `SKILL.md references "${ref}" but it is not bundled as a resource — the compiled skill will point at a missing file`
+    });
+  }
+}
 
 export function parseFrontmatter(text: string): { fm: Record<string, string>; body: string } {
   const m = FRONTMATTER_RE.exec(text);
@@ -78,6 +142,12 @@ export function loadSource(srcDir: string): { ir: SkillIR; diagnostics: Diagnost
     }
   }
 
+  // resources: explicit list wins; otherwise auto-detect. Checked against
+  // SKILL.md body references so a doc the instructions cite cannot silently
+  // ship missing (the 4-runtime trial's deployment.md gap).
+  const resources = collectResources(srcDir, data.resources, diagnostics);
+  checkBodyReferences(body, resources, diagnostics);
+
   const mergedTools = new Map<string, ToolRef>();
   for (const t of (data.tools ?? []) as ToolRef[]) mergedTools.set(t.id, t);
   for (const t of tools) mergedTools.set(t.id, t);
@@ -93,6 +163,7 @@ export function loadSource(srcDir: string): { ir: SkillIR; diagnostics: Diagnost
     tools: [...mergedTools.values()],
     triggers: data.triggers ?? [],
     targets: data.targets ?? {},
+    resources,
     sourceDir: srcDir,
     irHash: ""
   };
@@ -107,7 +178,8 @@ export function loadSource(srcDir: string): { ir: SkillIR; diagnostics: Diagnost
       body: ir.body,
       tools: ir.tools,
       triggers: ir.triggers,
-      targets: ir.targets
+      targets: ir.targets,
+      resources: ir.resources
     })
   );
   return { ir, diagnostics };

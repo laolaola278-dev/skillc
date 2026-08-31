@@ -77,6 +77,30 @@ export function validateSkillYaml(
     });
   }
 
+  if (data.resources !== undefined) {
+    if (!Array.isArray(data.resources)) fail("resources", "resources must be an array of relative file paths");
+    for (const raw of data.resources as unknown[]) {
+      const r = typeof raw === "string" ? raw : "";
+      if (r.trim() === "") {
+        fail("resources", "every resource must be a non-empty relative path string");
+      }
+      const norm = r.split("\\").join("/");
+      if (norm !== r) {
+        diagnostics.push({
+          level: "info",
+          code: "resource-path-normalized",
+          message: `resources: "${r}" normalized to "${norm}"`
+        });
+      }
+      if (norm.startsWith("/") || /^[A-Za-z]:/.test(norm)) {
+        fail("resources", `resource "${r}" must be a relative path inside the skill source`);
+      }
+      if (norm.split("/").some((s: string) => s === "..")) {
+        fail("resources", `resource "${r}" must not traverse outside the skill source`);
+      }
+    }
+  }
+
   if (data.targets !== undefined) {
     for (const key of Object.keys(data.targets)) {
       if (!(KNOWN_TARGETS as readonly string[]).includes(key)) {

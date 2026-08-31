@@ -1,7 +1,11 @@
 name: deploy-qm
-version: 0.1.0
+version: 0.2.0
 description: Deploy the QM package from an organization-owned deployment repository to Fly.io or AWS, onboard an administrator, configure connectors, and optionally activate Slack.
 needs: [read-files, write-files, shell, web-fetch]
+resources:
+  - deployment.md
+  - references/fly.md
+  - references/aws.md
 tools:
   - id: example-tool
     advertise: example-tool

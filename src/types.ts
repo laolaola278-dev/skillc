@@ -45,6 +45,13 @@ export interface SkillYaml {
   tools?: ToolRef[];
   triggers?: Trigger[];
   targets?: Partial<Record<TargetId, unknown>>;
+  /**
+   * Resource files bundled verbatim next to the compiled SKILL.md on every
+   * target (workflow docs, provider references...). Relative paths with
+   * forward slashes. Undefined = auto-detect every non-source file in the
+   * skill.src directory; an empty array explicitly opts out.
+   */
+  resources?: string[];
 }
 
 export interface SkillIR {
@@ -58,6 +65,8 @@ export interface SkillIR {
   tools: ToolRef[];
   triggers: Trigger[];
   targets: Partial<Record<TargetId, unknown>>;
+  /** relPath (forward slashes) -> file content; bundled into every target dir. */
+  resources: Record<string, string>;
   sourceDir: string;
   irHash: string;
 }

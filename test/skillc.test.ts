@@ -253,3 +253,75 @@ test("unpack reverse-imports a bare SKILL.md directory", () => {
   assert.deepEqual(ir.needs, ["read-files", "write-files"], "conservative default needs");
   assert.equal(diagnostics.length, 0);
 });
+
+test("resources: auto-detected files bundle into every target and sync idempotently", () => {
+  const dir = makeSource("t10", YAML, MD);
+  writeFileSync(join(dir, "deployment.md"), "# Workflow\n\nDo the steps.\n", "utf8");
+  mkdirSync(join(dir, "references"), { recursive: true });
+  writeFileSync(join(dir, "references", "fly.md"), "# Fly\n", "utf8");
+  const { ir } = loadSource(dir);
+  assert.deepEqual(Object.keys(ir.resources).sort(), ["deployment.md", "references/fly.md"]);
+  for (const t of ["claude-code", "codex", "dsh", "hermes"] as const) {
+    const { files } = emitForTarget(t, ir);
+    const skill = files.find((f) => f.kind === "standalone" && f.path.endsWith("/SKILL.md"));
+    assert.ok(skill, t + " SKILL.md emitted");
+    const base = skill.path.replace(/SKILL\.md$/, "");
+    assert.ok(files.some((f) => f.path === base + "deployment.md"), t + " bundles deployment.md");
+    assert.ok(files.some((f) => f.path === base + "references/fly.md"), t + " bundles references/fly.md");
+  }
+  const root = join(TMP, "t10", "root");
+  const { files } = emitForTarget("codex", ir);
+  let plan = planSync("codex", files, root, null);
+  assert.ok(
+    plan.actions.every((a) => a.kind === "create" || a.kind === "inject-append"),
+    "fresh root: standalone resources create, injection appends"
+  );
+  const res = applyPlan("codex", plan.actions, root, ir.version);
+  writeLockfile(root, mergeLock(null, ir.name, ir.version, { codex: res.entries }));
+  plan = planSync("codex", files, root, readLock(root));
+  assert.ok(plan.actions.every((a) => a.kind === "unchanged"), "second sync idempotent including resources");
+  writeFileSync(join(root, ".codex", "skills", "demo-skill", "deployment.md"), "hand-edited\n", "utf8");
+  plan = planSync("codex", files, root, readLock(root));
+  assert.equal(plan.actions.find((a) => a.file.path.endsWith("deployment.md"))?.kind, "blocked", "hand-edited resource is protected");
+  const pack = packSource(dir);
+  assert.equal(pack.files["deployment.md"], "# Workflow\n\nDo the steps.\n", "pack carries resources");
+});
+
+test("resources: explicit list wins; missing entry errors; unreferenced doc warns; traversal rejected", () => {
+  const dir = makeSource("t11", YAML, "# Demo\n\nRead `missing.md`.\n");
+  writeFileSync(join(dir, "real.md"), "# Real\n", "utf8");
+  const { diagnostics } = loadSource(dir);
+  assert.ok(
+    diagnostics.some((d) => d.code === "missing-referenced-resource" && d.message.includes("missing.md")),
+    "auto-detect does not silence a missing referenced doc"
+  );
+  const yml = YAML + "resources:\n  - real.md\n  - ghost.md\n";
+  const dirB = makeSource("t11b", yml, "# Demo\n\nFollow `real.md`.\n");
+  writeFileSync(join(dirB, "real.md"), "# Real\n", "utf8");
+  const loaded = loadSource(dirB);
+  assert.ok(loaded.diagnostics.some((d) => d.level === "error" && d.code === "resource-missing" && d.message.includes("ghost.md")));
+  assert.deepEqual(Object.keys(loaded.ir.resources), ["real.md"]);
+  assert.ok(loaded.diagnostics.every((d) => d.code !== "missing-referenced-resource"), "explicit bundling clears the warning");
+  assert.throws(() => loadSource(makeSource("t11c", YAML + "resources:\n  - ../secrets.md\n", MD)), /traverse/);
+  const empty = loadSource(makeSource("t11d", YAML + "resources: []\n", MD));
+  assert.equal(Object.keys(empty.ir.resources).length, 0, "empty array opts out");
+});
+
+test("resources: path colliding with an emitted file is skipped with a diagnostic", () => {
+  const ir = loadSource(makeSource("t12", YAML + "resources:\n  - SKILL.md\n", MD)).ir;
+  const { files, diagnostics } = emitForTarget("claude-code", ir);
+  assert.equal(files.filter((f) => f.path === ".claude/skills/demo-skill/SKILL.md").length, 1, "no duplicate emitted");
+  assert.ok(diagnostics.some((d) => d.code === "resource-collision"));
+});
+
+test("resources: referenced doc bundled -> warning gone and irHash changes", () => {
+  const ymlWith = YAML + "resources:\n  - guide.md\n";
+  const md = "# Demo\n\nRead `guide.md` completely.\n";
+  const without = loadSource(makeSource("t13", YAML, md));
+  assert.ok(without.diagnostics.some((d) => d.code === "missing-referenced-resource"));
+  const withRes = loadSource(makeSource("t13b", ymlWith, md));
+  writeFileSync(join(withRes.ir.sourceDir, "guide.md"), "# Guide\n", "utf8");
+  const rebundled = loadSource(withRes.ir.sourceDir);
+  assert.ok(rebundled.diagnostics.every((d) => d.code !== "missing-referenced-resource"));
+  assert.notEqual(without.ir.irHash, rebundled.ir.irHash, "bundling a resource changes the IR hash");
+});

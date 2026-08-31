@@ -98,7 +98,37 @@ test("emit claude-code: frontmatter, body, tools section, valid tool.json", () =
   const tool = files.find((f) => f.path === ".claude/skills/demo-skill/tools/demo-tool/tool.json");
   assert.ok(tool, "tool.json emitted");
   assert.deepEqual(JSON.parse(tool.content).install, { binary: "wrong-binary" });
-  assert.throws(() => emitForTarget("codex", ir), /not implemented/);
+});
+
+test("emit codex: SKILL.md + tool.json + AGENTS.md injection block", () => {
+  const ir = loadSource(makeSource("t5b", YAML, MD)).ir;
+  const { files, diagnostics } = emitForTarget("codex", ir);
+  const skill = files.find((f) => f.path === ".codex/skills/demo-skill/SKILL.md");
+  assert.ok(skill, "codex SKILL.md emitted");
+  assert.ok(skill.content.startsWith("---\nname: demo-skill\n"));
+  const tool = files.find((f) => f.path === ".codex/skills/demo-skill/tools/demo-tool/tool.json");
+  assert.ok(tool, "codex tool.json emitted");
+  const inj = files.find((f) => f.path === "AGENTS.md");
+  assert.ok(inj, "AGENTS.md injection emitted");
+  assert.equal(inj.kind, "injection");
+  assert.equal(inj.markerName, "demo-skill");
+  assert.ok(inj.content.startsWith("<!-- skillc:begin name=demo-skill version=1.0.0 hash="));
+  assert.ok(inj.content.trimEnd().endsWith("<!-- skillc:end -->"));
+  assert.ok(inj.content.includes(".codex/skills/demo-skill/SKILL.md"));
+  assert.equal(diagnostics.filter((d) => d.code === "cap-degraded").length, 0, "yaml needs all native on codex");
+});
+
+test("emit dsh: triggers compiled into text with info diagnostic", () => {
+  const yml = YAML + "triggers:\n  - cron: \"0 9 * * 1\"\n    prompt: morning check\n";
+  const ir = loadSource(makeSource("t5c", yml, MD)).ir;
+  const { files, diagnostics } = emitForTarget("dsh", ir);
+  const skill = files.find((f) => f.path === ".dsh/skills/demo-skill/SKILL.md");
+  assert.ok(skill, "dsh SKILL.md emitted");
+  assert.ok(skill.content.includes("## Triggers"));
+  assert.ok(skill.content.includes("cron \"0 9 * * 1\""));
+  assert.ok(diagnostics.some((d) => d.code === "triggers-documented"));
+  const { diagnostics: ccDiags } = emitForTarget("claude-code", ir);
+  assert.ok(ccDiags.some((d) => d.code === "triggers-compiled-out"), "cron compiled out on claude-code");
 });
 
 test("sync standalone: create -> unchanged -> blocked -> force replace", () => {

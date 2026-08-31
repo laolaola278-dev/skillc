@@ -1,19 +1,23 @@
-import { TARGET_CAPS } from "../compat.js";
+import { TARGET_CAPS, checkCompat } from "../compat.js";
 import type { EmitResult, SkillIR, TargetId } from "../types.js";
 import { emitClaudeCode } from "./claude-code.js";
+import { emitCodex } from "./codex.js";
+import { emitDsh } from "./dsh.js";
 
-/** Targets with a working emitter. M2 adds codex and dsh. */
-export const IMPLEMENTED_TARGETS: readonly TargetId[] = ["claude-code"];
+/** Targets with a working emitter. */
+export const IMPLEMENTED_TARGETS: readonly TargetId[] = ["claude-code", "codex", "dsh"];
 
 const EMITTERS: Partial<Record<TargetId, (ir: SkillIR) => EmitResult>> = {
-  "claude-code": emitClaudeCode
+  "claude-code": emitClaudeCode,
+  codex: emitCodex,
+  dsh: emitDsh
 };
 
 export function emitForTarget(target: TargetId, ir: SkillIR): EmitResult {
   const emit = EMITTERS[target];
   if (!emit) throw new Error(`target "${target}" is declared but not implemented yet`);
   const result = emit(ir);
-  const diagnostics = [...TARGET_COMPAT(ir, target), ...result.diagnostics];
+  const diagnostics = [...checkCompat(ir, target), ...result.diagnostics];
   if (ir.triggers.length > 0 && !(TARGET_CAPS[target] ?? []).includes("cron")) {
     diagnostics.push({
       level: "info",
@@ -25,5 +29,3 @@ export function emitForTarget(target: TargetId, ir: SkillIR): EmitResult {
   for (const d of diagnostics) d.target = target;
   return { files: result.files, diagnostics };
 }
-
-import { checkCompat as TARGET_COMPAT } from "../compat.js";

@@ -64,6 +64,18 @@ tokens used：**17,687**。
 - **resourceBase**：技能目录本身，正文相对路径可解析。
 
 待用户批准后的执行清单（一次 sync 即可）：`node dist/cli.js sync --src examples/deploy-qm/skill.src --root <HDS项目根> --target dsh --write`，随后用 `skill` 工具验证 `deploy-qm` 可加载。**无需重启 HDS**。
+## 6. M3.5 复验（2026-08-31，资源捆绑上线后）
+
+skillc M3.5（commit `5526a1f`）实现资源捆绑：`skill.yaml` 显式 `resources:` 列表（空数组显式退出），缺省自动捆绑 skill.src 内全部非源文件；产物逐目标目录原样落盘，sync/lockfile/pack 全链路带 hash；SKILL.md 引用了未捆绑的 .md 时编译期告警（`missing-referenced-resource`）。测试 12→**16 全绿**。
+
+重跑臂 A 工作区（`tmp-codex-run`，同模型 vsllm [opencode]deepseek-v4-flash、同 prompt）：
+
+- sync 实况（升级路径 dogfood）：AGENTS.md 注入块 `~` inject-replace（0.1.0→0.2.0），SKILL.md `=` 幂等不变，3 个资源 `+` 新建。
+- 模型沿 **SKILL.md → deployment.md（§1 凭据同轮收集）→ references/fly.md**，给出真实三步：① `fly launch --name <app> --no-deploy`（拒绝所有 add-on，fly.toml 权威）② `fly secrets set QM_BASE_MODEL_KEY/QM_SIGNIN_METHOD` ③ `fly deploy`；收尾再次声明 "No deployment was executed"。
+- **全对率达成**：不再因 deployment.md 缺失而止步；且完全依赖本仓库产物，与基线 B"靠运气读到原始文档"有本质区别（可复现）。
+- tokens used：**20,932**（A1 13,620 / B 17,687）。代价透明 = 链上多读 3 个资源文件；收益 = 答案从"流程正确但不完整"升级为**全对** + 行为确定性。
+- CLI 全局化完成：`npm link` → `D:\npm\global`（PATH 已含），任意目录 `skillc --version` 通过（pnpm link 的全局 bin 不在 PATH，弃用）。
+
 
 ## 6. 发现与后续
 

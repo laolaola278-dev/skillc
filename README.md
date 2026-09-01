@@ -4,7 +4,8 @@
 skill.src/                      skillc build+sync
 ├── skill.yaml    (metadata)    ├── .claude/skills/<name>/SKILL.md   ← Claude Code
 ├── SKILL.md      (body)        ├── .codex/… + AGENTS.md  (marker)   ← Codex
-└── tools/*.json  (QM-compatible) └── skills/<name>/SKILL.md          ← DSH
+├── resources/**  (docs, refs)  ├── .dsh/skills/<name>/SKILL.md      ← DSH
+└── tools/*.json  (QM-compatible) └── .hermes/skills/<name>/SKILL.md  ← Hermes
 ```
 
 **EN.** skillc is a local-first compiler for personal agent skills. You maintain ONE
@@ -21,25 +22,33 @@ skillc 编译出每个 harness 的原生格式，能力缺失时明确降级（�
 
 ## Status / 状态
 
-MVP complete (this repo): source parsing, IR, compat diagnostics, emitters for
-Claude Code + Codex (AGENTS.md injection) + DSH, safe sync with lockfile, doctor,
-pack/unpack reverse import, upgrade. Verified: 11/11 tests, npm-pack install
-smoke test passes. See docs/FORMAT.md for the source format spec.
+Complete (this repo): source parsing, IR, compat diagnostics, emitters for
+Claude Code + Codex (AGENTS.md injection) + DSH + Hermes, safe sync with lockfile
+(create / replace / inject-replace / inject-append / unchanged / blocked), doctor,
+pack/unpack reverse import, upgrade, resource bundling (M3.5: explicit
+`resources:` list or auto-detect, copied verbatim into every target skill dir,
+with missing-reference diagnostics). Verified: 16/16 tests; global CLI via
+`npm link` (`skillc` works from any directory); real-runtime validation on
+Codex/Claude Code/Hermes/OpenClaw (see docs/TRIAL-*.md). See docs/FORMAT.md
+for the source format spec and docs/DESIGN.md for the delivered contract.
 
 ## Quick start / 快速开始
 
 ```bash
 npm install && npm run build
-node dist/cli.js doctor --src examples/deploy-qm/skill.src
-node dist/cli.js build  --src examples/deploy-qm/skill.src --root <your-project>
-node dist/cli.js sync   --src examples/deploy-qm/skill.src --root <your-project>          # dry-run
-node dist/cli.js sync   --src examples/deploy-qm/skill.src --root <your-project> --write  # apply
+npm link  # then skillc is global: any directory, any project
+skillc doctor --src examples/deploy-qm/skill.src
+skillc sync  --src examples/deploy-qm/skill.src --root <your-project>          # dry-run
+skillc sync  --src examples/deploy-qm/skill.src --root <your-project> --write  # apply
 ```
 
 Commands / 命令:
-- build — compile to .skillc/plan.json (nothing else written) / 编译为计划，不落盘
-- sync  — apply plan (dry-run default; --write applies; --force overrides) / 应用（默认空跑）
-- doctor — validate source + per-target compatibility / 校验源与目标兼容性
+- `skillc build --src skill.src [--target <id>] [--root <dir>]` — compile to `.skillc/plan.json` (nothing else written) / 编译为计划，不落盘
+- `skillc sync --src skill.src [--target <id>] [--root <dir>] [--write] [--force]` — apply plan (dry-run default; `--write` applies; `--force` overrides) / 应用（默认空跑）
+- `skillc upgrade --src skill.src [--root <dir>]` — sync with version-delta report / 版本升级检查+应用
+- `skillc pack --src skill.src -o out.skillpack` — bundle source into one portable file / 打包为单文件
+- `skillc unpack <input> [-o <dir>]` — reverse-import a `.skillpack` back into skill.src / 解包回源
+- `skillc doctor --src skill.src` — validate source + per-target compatibility (writes nothing) / 校验，零写入
 
 ## Why not just copy files? / 为什么不是复制文件
 

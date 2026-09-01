@@ -5,6 +5,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
 
 const VERSION = "0.1.0";
 const CONFIG_NAME = "gitguard.json";
@@ -130,7 +131,32 @@ function hookScript(cliPath, mode) {
   ].join("\n");
 }
 
+function globalHooksDir() {
+  return join(homedir(), ".gitguard", "hooks");
+}
+
 function cmdInstall(opts) {
+  if (opts.global) {
+    const hooksDir = globalHooksDir();
+    mkdirSync(hooksDir, { recursive: true });
+    const cliPath = fileURLToPath(import.meta.url);
+    const plan = [ ["pre-commit", "staged"], ["pre-push", "all"] ];
+    for (const [name, mode] of plan) {
+      const target = join(hooksDir, name);
+      const exists = existsSync(target);
+      if (exists && !opts.force) {
+        console.log("gitguard: global " + name + " already exists — pass --force to overwrite");
+        continue;
+      }
+      writeFileSync(target, hookScript(cliPath, mode), { mode: 0o755 });
+      console.log("gitguard: installed global " + name + " hook -> " + target);
+    }
+    const res = spawnSync("git", ["config", "--global", "core.hooksPath", hooksDir], { encoding: "utf8" });
+    if (res.status !== 0) { console.error("gitguard: failed to set core.hooksPath: " + res.stderr); process.exit(1); }
+    console.log("gitguard: global core.hooksPath = " + hooksDir);
+    console.log("gitguard: NOTE — core.hooksPath overrides per-repo .git/hooks in ALL repos. Run `gitguard uninstall --global` to restore.");
+    return;
+  }
   const root = findRepoRoot(opts.dir);
   if (!root) { console.error("gitguard: not inside a git repository"); process.exit(1); }
   const hooksDir = join(root, ".git", "hooks");
@@ -150,6 +176,13 @@ function cmdInstall(opts) {
 }
 
 function cmdUninstall(opts) {
+  if (opts.global) {
+    const res = spawnSync("git", ["config", "--global", "--unset", "core.hooksPath"], { encoding: "utf8" });
+    const hooksDir = globalHooksDir();
+    if (existsSync(hooksDir)) rmSync(hooksDir, { recursive: true, force: true });
+    console.log("gitguard: removed global core.hooksPath" + (res.status !== 0 ? " (was not set)" : "") + " and cleaned " + hooksDir);
+    return;
+  }
   const root = findRepoRoot(opts.dir);
   if (!root) { console.error("gitguard: not inside a git repository"); process.exit(1); }
   for (const name of ["pre-commit", "pre-push"]) {
@@ -175,8 +208,8 @@ function usage() {
     "",
     "Usage:",
     "  gitguard check [--staged] [--dir <repo>] [--files <path...>]   scan files; exit 1 on errors",
-    "  gitguard install [--force] [--dir <repo>]                      install pre-commit + pre-push hooks",
-    "  gitguard uninstall [--dir <repo>]                             remove gitguard hooks",
+    "  gitguard install [--force] [--global] [--dir <repo>]           install pre-commit + pre-push hooks (--global: all repos)",
+    "  gitguard uninstall [--global] [--dir <repo>]                   remove gitguard hooks (--global: all repos)",
     "  gitguard config                                               print effective rules",
     "  gitguard -v | --version                                       version",
     "  gitguard -h | --help                                          this help",
@@ -188,10 +221,11 @@ function usage() {
 
 function main(argv) {
   const [cmd, ...rest] = argv;
-  const opts = { dir: null, staged: false, force: false, files: [] };
+  const opts = { dir: null, staged: false, force: false, global: false, files: [] };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === "--staged") opts.staged = true;
+    if (a === "--global") opts.global = true;
+    else if (a === "--staged") opts.staged = true;
     else if (a === "--force") opts.force = true;
     else if (a === "--dir") opts.dir = rest[++i];
     else if (a === "--files") { while (i + 1 < rest.length && !rest[i + 1].startsWith("--")) opts.files.push(rest[++i]); }

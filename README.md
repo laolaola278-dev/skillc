@@ -77,8 +77,10 @@ License: MIT.
 都聚焦凭据，没有现成工具覆盖“个人环境信息”这一类泄漏，所以自己搭了一个。
 
 ```
-cd guard && npm link     # 全局安装 gitguard
-cd <你的仓库> && gitguard install   # 装 pre-commit + pre-push 双钩子
+cd guard && npm link         # 全局安装 gitguard
+cd <你的仓库> && gitguard install         # 装 pre-commit + pre-push 双钩子
+# 或：一次安装，所有仓库生效：
+gitguard install --global            # 保护全机所有 git 仓库（含 Claude Code / Codex / DSH 等）
 ```
 
 用法与规则见 [guard/README.md](guard/README.md)。

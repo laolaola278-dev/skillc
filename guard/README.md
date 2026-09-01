@@ -23,14 +23,30 @@ Or run straight from the repo without installing:
 ## Usage
 
     gitguard check [--staged] [--dir <repo>] [--files <path...>]   scan; exit 1 on errors
-    gitguard install [--force] [--dir <repo>]                      install pre-commit + pre-push hooks
-    gitguard uninstall [--dir <repo>]                             remove gitguard hooks
+    gitguard install [--force] [--global] [--dir <repo>]           install pre-commit + pre-push hooks (--global: all repos)
+    gitguard uninstall [--global] [--dir <repo>]                   remove gitguard hooks (--global: all repos)
     gitguard config                                               print effective rules
+
+### Per-repo install (default)
 
 `gitguard install` writes two hooks into `.git/hooks`:
 
 - **pre-commit** — scans staged files; blocks the commit on any error-level hit
 - **pre-push** — scans all tracked files; blocks the push even if a leak was committed earlier
+
+### Global install (`--global`)
+
+`gitguard install --global` sets `git config --global core.hooksPath` to a global hooks
+directory (`~/.gitguard/hooks`). Git then runs gitguard hooks on **every repository** on
+this machine — including repos where you haven't run `gitguard install`.
+
+Because gitguard hooks into git's pre-commit and pre-push events, **all tools that commit
+or push through git** (Claude Code, Codex, DSH harness, your own CLI commits) are
+automatically covered — no per-tool integration needed.
+
+> **Caveat**: `core.hooksPath` overrides per-repo `.git/hooks` in ALL repos. If you use
+> other hook tools (husky, etc.), `--global` will skip them. Run `gitguard uninstall --global`
+> to restore the default git behavior.
 
 ## Built-in rules
 

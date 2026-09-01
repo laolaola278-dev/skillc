@@ -65,3 +65,21 @@ the neutral layer between skill authors and harness owners. / 无注册中心、
 无运行时、无组织功能——纯本地编译器，技能作者与 harness 之间的中立层。
 
 License: MIT.
+
+---
+
+## gitguard — commit hygiene guard（随附工具）
+
+[`guard/`](guard/) 是一个零依赖的 pre-commit / pre-push 守卫 CLI：在代码推到 GitHub
+前拦截个人环境指纹——本地绝对路径、用户名、私有 provider 名、API key、私钥块。
+
+这是本项目脱敏发布时的实战产物：现有工具（gitleaks / detect-secrets / git-secrets）
+都聚焦凭据，没有现成工具覆盖“个人环境信息”这一类泄漏，所以自己搭了一个。
+
+```
+cd guard && npm link     # 全局安装 gitguard
+cd <你的仓库> && gitguard install   # 装 pre-commit + pre-push 双钩子
+```
+
+用法与规则见 [guard/README.md](guard/README.md)。
+

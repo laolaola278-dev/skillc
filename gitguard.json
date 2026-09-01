@@ -1,0 +1,17 @@
+{
+  "ignore": [
+    "test/",
+    "guard/test/"
+  ],
+  "skip": [
+    {
+      "file": "docs/",
+      "line": ">\\*C:"
+    },
+    {
+      "file": "guard/README.md",
+      "line": "[A-Za-z]:\\\\"
+    }
+  ],
+  "disabled": []
+}

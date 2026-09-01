@@ -1,0 +1,26 @@
+{
+  "name": "gitguard",
+  "version": "0.1.0",
+  "description": "Pre-commit / pre-push guard that blocks personal-environment fingerprints (local paths, usernames, private provider names, API keys) from reaching GitHub. Zero dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "gitguard": "./cli.mjs"
+  },
+  "scripts": {
+    "test": "node --test test/guard.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "git",
+    "hooks",
+    "secrets",
+    "sensitive-data",
+    "pre-commit",
+    "pre-push",
+    "guard",
+    "privacy"
+  ]
+}

@@ -12,7 +12,7 @@
 
 | 项 | 值 |
 |---|---|
-| codex-cli | 0.149.0（`D:\npm\global\codex.ps1`） |
+| codex-cli | 0.149.0（npm 全局安装的 `codex.ps1`） |
 | 模型 | `[opencode]deepseek-v4-flash`（用户自定义 provider，两臂完全一致 → 满足同模型对比） |
 | 沙箱 | `--sandbox read-only`，`--skip-git-repo-check`，非交互 `codex exec` |
 | 技能源 | `examples/deploy-qm/skill.src`（skillc 编译，版本 0.1.0） |
@@ -74,7 +74,7 @@ skillc M3.5（commit `5526a1f`）实现资源捆绑：`skill.yaml` 显式 `resou
 - 模型沿 **SKILL.md → deployment.md（§1 凭据同轮收集）→ references/fly.md**，给出真实三步：① `fly launch --name <app> --no-deploy`（拒绝所有 add-on，fly.toml 权威）② `fly secrets set QM_BASE_MODEL_KEY/QM_SIGNIN_METHOD` ③ `fly deploy`；收尾再次声明 "No deployment was executed"。
 - **全对率达成**：不再因 deployment.md 缺失而止步；且完全依赖本仓库产物，与基线 B"靠运气读到原始文档"有本质区别（可复现）。
 - tokens used：**20,932**（A1 13,620 / B 17,687）。代价透明 = 链上多读 3 个资源文件；收益 = 答案从"流程正确但不完整"升级为**全对** + 行为确定性。
-- CLI 全局化完成：`npm link` → `D:\npm\global`（PATH 已含），任意目录 `skillc --version` 通过（pnpm link 的全局 bin 不在 PATH，弃用）。
+- CLI 全局化完成：`npm link` → npm 全局 bin 目录（PATH 已含），任意目录 `skillc --version` 通过（pnpm link 的全局 bin 不在 PATH，弃用）。
 
 
 ## 6. 发现与后续

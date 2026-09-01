@@ -6,7 +6,7 @@
 
 - 目标：把 skillc 编译产物接入真实 agent 运行时并做接入前后同模型对比。
 - 用户指令：暂不动 HDS（不重启、不写入）；先在 Codex 上试；全程记录；清除 DSH 侧改动。
-- 边界遵守：harness 检出（deepseek-harness-master）经 `git status --porcelain` 验证**零改动**（本会话只读取过源码）；`tmp-e2e/.dsh/` 与 lockfile 中 dsh 条目已删除；所有试跑都在 `skillc/tmp-*` 工作区（gitignored）。
+- 边界遵守：harness 检出（<harness-checkout>）经 `git status --porcelain` 验证**零改动**（本会话只读取过源码）；`tmp-e2e/.dsh/` 与 lockfile 中 dsh 条目已删除；所有试跑都在 `skillc/tmp-*` 工作区（gitignored）。
 
 ## 2. 环境
 
@@ -38,8 +38,8 @@
 **结果**：模型宣称"技能已安装"却找不到，随即开始全盘搜索（≥9 次 exec）：
 
 1. 工作区递归找 `SKILL.md` → 只有 AGENTS.md
-2. 越界到 `C:\Users\JianXi\.codex\skills`（用户主目录）
-3. 越界到 `G:\project\deepseek-harness\work_hds\skillc` 递归（**父目录树**，超出其项目根）
+2. 越界到 `%USERPROFILE%\.codex\skills`（用户主目录）
+3. 越界到 `<repo-root>` 递归（**父目录树**，超出其项目根）
 4. 最终靠搜到 `qm-deploy-test` 里的**原始 QM 文档**（deployment.md + references/fly.md）才答对（内容正确、含 §1/§2/§3 与精确命令）
 
 tokens used：**17,687**。
@@ -68,7 +68,7 @@ tokens used：**17,687**。
 
 skillc M3.5（commit `5526a1f`）实现资源捆绑：`skill.yaml` 显式 `resources:` 列表（空数组显式退出），缺省自动捆绑 skill.src 内全部非源文件；产物逐目标目录原样落盘，sync/lockfile/pack 全链路带 hash；SKILL.md 引用了未捆绑的 .md 时编译期告警（`missing-referenced-resource`）。测试 12→**16 全绿**。
 
-重跑臂 A 工作区（`tmp-codex-run`，同模型 vsllm [opencode]deepseek-v4-flash、同 prompt）：
+重跑臂 A 工作区（`tmp-codex-run`，同模型 [<provider>]deepseek-v4-flash、同 prompt）：
 
 - sync 实况（升级路径 dogfood）：AGENTS.md 注入块 `~` inject-replace（0.1.0→0.2.0），SKILL.md `=` 幂等不变，3 个资源 `+` 新建。
 - 模型沿 **SKILL.md → deployment.md（§1 凭据同轮收集）→ references/fly.md**，给出真实三步：① `fly launch --name <app> --no-deploy`（拒绝所有 add-on，fly.toml 权威）② `fly secrets set QM_BASE_MODEL_KEY/QM_SIGNIN_METHOD` ③ `fly deploy`；收尾再次声明 "No deployment was executed"。

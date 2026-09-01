@@ -18,10 +18,10 @@
 
 | 运行时 | 版本 | 接入方式 | 模型（两臂一致） | provider |
 |---|---|---|---|---|
-| Codex CLI | 0.149.0 | AGENTS.md 注入块 + `.codex/skills/` | `[opencode]deepseek-v4-flash` | vsllm |
+| Codex CLI | 0.149.0 | AGENTS.md 注入块 + `.codex/skills/` | `[opencode]deepseek-v4-flash` | <provider> |
 | Claude Code | 2.1.227 | `.claude/skills/`（agentskills 目录） | `glm-5.3-flash` | b.ai |
-| Hermes Agent | 0.20.6 (2026.8.27) | `skills.external_dirs` → 工作区 `.hermes/skills/` | `[opencode]deepseek-v4-flash` | vsllm |
-| OpenClaw | 2026.7.2 | `--profile` 隔离 + `skills.load.extraDirs` → agentskills 技能目录 | `[opencode]deepseek-v4-flash` | vsllm |
+| Hermes Agent | 0.20.6 (2026.8.27) | `skills.external_dirs` → 工作区 `.hermes/skills/` | `[opencode]deepseek-v4-flash` | <provider> |
+| OpenClaw | 2026.7.2 | `--profile` 隔离 + `skills.load.extraDirs` → agentskills 技能目录 | `[opencode]deepseek-v4-flash` | <provider> |
 
 ## 3. 数据对照表
 
@@ -47,7 +47,7 @@
 ### 5.1 Hermes（本次新增安装）
 
 - 安装：官方脚本 v0.20.6，数据目录 `~/.hermes`（安装器 `-HermesHome` 播种）。运行时默认 home 是 `%LOCALAPPDATA%\hermes`，**用户级环境变量 `HERMES_HOME` 已指向 `~/.hermes`** 使其读 cc-switch 管理的配置（新开的终端生效）。
-- 模型接入（`~/.hermes/config.yaml`，legacy `custom_providers` 格式，与 cc-switch 兼容）：保留原有 deepseek/sensenova，新增 **bai**（`https://api.b.ai/v1`，chat_completions，glm-5.3-flash/deepseek-v4-flash/qwen3.8-flash）与 **vsllm**（`[opencode]deepseek-v4-flash`、gemini-3.7-flash）。默认模型 = bai/glm-5.3-flash（用户要求 b.ai 与 vsllm 为主）。
+- 模型接入（`~/.hermes/config.yaml`，legacy `custom_providers` 格式，与 cc-switch 兼容）：保留原有 deepseek/sensenova，新增 **<provider-a>**（chat_completions，glm-5.3-flash/deepseek-v4-flash/qwen3.8-flash）与 **<provider-b>**（`[opencode]deepseek-v4-flash`、gemini-3.7-flash）。默认模型 = <provider-a>/glm-5.3-flash（用户要求两 provider 为主）。
 - **C 盘写入禁令**：`approvals.deny`（fnmatch 命令文本匹配，`--yolo` 也拦）+ `approvals.smart_policy` 文本 + `SOUL.md` 硬边界段，三层防护。deny 覆盖重定向（`>*C:\*`、`>*C:/*`、`>*/c/*`）、PowerShell 写类（Set-Content/New-Item/Copy-Item/Remove-Item/Out-File 等）、cmd/bash 类（del/md/copy/move、rm/mv/cp/mkdir/touch/tee 的 /c/ 形式）。
 - 冒烟：`hermes chat -q "Reply with exactly: OK" --oneshot` → 23s 正常应答。
 - 试跑隔离：A/B 各用独立 `HERMES_HOME`（`tmp-trial/hermes-home-{a,b}`），环境变量覆盖实测有效。
@@ -59,7 +59,7 @@
 
 ### 5.3 OpenClaw
 
-- 用户主配置 `~/.openclaw/openclaw.json` **文件本身有效**（Node UTF-8 解析通过；起初的"损坏"判断是探针假象——Windows PowerShell 5.1 对无 BOM UTF-8 按 ANSI 误读，奇数字节中文名吞掉收尾引号）。其 `skills.load.extraDirs` 指向 `G:\openclaw_chat_project\剪辑处理\抖音自动化`，与真实目录一致；旁边确有一个 URL 编码名的姊妹目录 `%E5%89%AA%E8%BE%91%E5%A4%84%E7%90%86`（某次工具错写产物），可手动清理。为保持基线纯净，本试跑未复用用户主配置，改用 `--profile trial-a/b` 隔离（`~/.openclaw-trial-{a,b}/openclaw.json`，写入 vsllm provider + agentskills 技能目录）。
+- 用户主配置 `~/.openclaw/openclaw.json` **文件本身有效**（Node UTF-8 解析通过；起初的"损坏"判断是探针假象——Windows PowerShell 5.1 对无 BOM UTF-8 按 ANSI 误读，奇数字节中文名吞掉收尾引号）。其 `skills.load.extraDirs` 指向用户的抖音自动化项目目录（与真实目录一致；旁边确有一个 URL 编码名的姊妹目录，某次工具错写产物，可手动清理）。为保持基线纯净，本试跑未复用用户主配置，改用 `--profile trial-a/b` 隔离（`~/.openclaw-trial-{a,b}/openclaw.json`，写入 <provider> + agentskills 技能目录）。
 - 非交互 `agents add` **必须带 agent id**（`openclaw --profile <p> agents add <id> --workspace <dir> --non-interactive`），否则报 "Agent name is required"。
 - one-shot：`openclaw --profile <p> agent --local --agent <id> --message-file <path> --json --timeout 600`。
 
@@ -73,6 +73,6 @@
 
 ## 7. 边界遵守
 
-- HDS/DSH 运行时零接触（本次全程未读写 `deepseek-harness-master`）。
+- HDS/DSH 运行时零接触（本次全程未读写 `<harness-checkout>`）。
 - 所有 agent 试跑工作区在 `skillc/tmp-trial`（G 盘）；对 C: 的写入仅限用户明确要求的配置文件（`~/.hermes/config.yaml`、`SOUL.md`、`~/.openclaw-trial-{a,b}/`、用户环境变量 `HERMES_HOME`）。
 - API 密钥只写入本地配置（`~/.hermes/config.yaml` 等），未进入本仓库任何被提交文件；`tmp-cc/` 下 cc-switch 探针脚本均为只读（`readOnly: true`）。

@@ -10,7 +10,7 @@
 
 ## Phase 0 · CLI 全局化（5 分钟）
 
-- `pnpm link --global`（或文档化 `node G:\project\deepseek-harness\work_hds\skillc\dist\cli.js` 调用方式）。
+- `pnpm link --global`（或文档化 `node <repo-root>/dist/cli.js` 调用方式）。
 - 验收：任意目录 `skillc --help` 可用。
 
 ## Phase 1 · M3.5 资源捆绑（半天）
